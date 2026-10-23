@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Entrar . Panel ImpulData</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="login-page">
+  <form class="login-card" id="login-form">
+    <span class="kicker">ImpulData</span>
+    <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">Panel del equipo</h1>
+    <label>
+      <span class="field-label">Correo</span>
+      <input type="email" id="email" required autocomplete="username" />
+    </label>
+    <label>
+      <span class="field-label">Contrasena</span>
+      <input type="password" id="password" required autocomplete="current-password" />
+    </label>
+    <p class="error-text" id="error" style="display:none; margin:0;"></p>
+    <button type="submit" class="primary" id="submit-btn">Entrar</button>
+  </form>
+</div>
+<script src="/js/login.js"></script>
+</body>
+</html>
