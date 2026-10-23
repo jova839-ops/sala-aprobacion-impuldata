@@ -57,7 +57,7 @@ function render() {
     sceneCards += `
       <article class="scene-card">
         <div class="scene-image-wrap">
-          <img src="${escapeHtml(scene.imagePath)}" alt="Cuadro ${scene.sceneNumber}: ${escapeHtml(scene.sceneTitle)}" loading="lazy" />
+          <img src="${(window.SCENE_IMAGES && window.SCENE_IMAGES[scene.sceneNumber]) || ""}" alt="Cuadro ${scene.sceneNumber}: ${escapeHtml(scene.sceneTitle)}" loading="lazy" />
         </div>
         <div class="scene-body">
           <div class="scene-meta">
