@@ -195,7 +195,7 @@ const app = express();
 const PORT = process.env.PORT || 3050;
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(express.static(path.join(__dirname, "..", "public"), { index: false }));
 
 // ---------- Auth Routes ----------
 app.post("/api/login", async (req, res) => {
