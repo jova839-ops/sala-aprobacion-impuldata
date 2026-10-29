@@ -3,18 +3,32 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Sala de Aprobación · ImpulData</title>
+<title>ImpulData Studio · Sistema de Producción y Planes</title>
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-<div class="page" style="align-items:center; text-align:center; padding-top:4rem;">
-  <span class="kicker">ImpulData</span>
-  <h1>Sala de Aprobación</h1>
-  <p style="max-width:32rem; color:var(--muted-foreground);">
-    Herramienta interna para revisar storyboards con el cliente, cuadro por cuadro, por link, sin que necesite cuenta.
-    Los links de cliente se comparten desde el panel del equipo.
+<div class="page" style="align-items:center; text-align:center; padding-top:4rem; max-width: 680px;">
+  <span class="kicker">ImpulData Studio 2026</span>
+  <h1 style="font-size: 2.5rem; line-height: 1.15;">Planes, Catálogo y Aprobación de Videos</h1>
+  <p style="max-width:34rem; color:var(--muted-foreground); font-size: 1.05rem; margin-top: 0.75rem;">
+    Software interno conectado a Neon Postgres para diseñar planes de contenido, recomendar plantillas del catálogo de 97 formatos y revisar storyboards cuadro a cuadro con el cliente.
   </p>
-  <a class="btn primary" href="/login" style="text-decoration:none;">Entrar al panel</a>
+  
+  <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center;">
+    <a class="btn primary" href="/planes" style="text-decoration:none; font-size: 1rem; padding: 0.85rem 1.5rem;">
+      Generador de Planes y Propuestas
+    </a>
+    <a class="btn outline" href="/login" style="text-decoration:none; font-size: 1rem; padding: 0.85rem 1.5rem;">
+      Sala de Aprobación (Storyboards)
+    </a>
+  </div>
+
+  <div style="margin-top: 3.5rem; padding-top: 2rem; border-top: 1px solid var(--border); width: 100%; display: flex; justify-content: space-around; font-size: 0.85rem; color: var(--muted-foreground);">
+    <div><strong>97</strong> Plantillas Validadas</div>
+    <div><strong>Neon Postgres</strong> Serverless</div>
+    <div><strong>83</strong> Consecutivos ORG</div>
+    <div><strong>PDF</strong> Comercial y Actas</div>
+  </div>
 </div>
 </body>
 </html>

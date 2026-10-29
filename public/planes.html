@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generador de Planes y Propuestas · ImpulData</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .plan-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      position: relative;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .plan-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .plan-card.featured {
+      border: 2px solid var(--primary);
+      background: #fffdf5;
+    }
+    .badge-featured {
+      position: absolute;
+      top: -12px;
+      right: 1.5rem;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .price {
+      font-size: 1.85rem;
+      font-weight: 700;
+      font-family: var(--font-display);
+      color: var(--foreground);
+    }
+    .price-usd {
+      font-size: 0.85rem;
+      color: var(--muted-foreground);
+    }
+    .template-item {
+      font-size: 0.82rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-bottom: 0.4rem;
+    }
+    .template-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    .template-hook {
+      color: var(--muted-foreground);
+      font-style: italic;
+    }
+    .input-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 1rem;
+      align-items: flex-end;
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted-foreground);
+    }
+    .form-control {
+      padding: 0.65rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    .btn {
+      padding: 0.7rem 1.25rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+    .btn.primary {
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+    .btn.outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--foreground);
+    }
+    .btn.outline:hover {
+      background: var(--surface);
+    }
+  </style>
+</head>
+<body>
+  <div class="page" style="max-width: 1040px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+      <div>
+        <span class="kicker">ImpulData Studio</span>
+        <h2 style="font-size: 1.5rem;">Generador de Planes y Propuestas</h2>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <a href="/" class="btn outline">← Inicio</a>
+        <a href="/panel" class="btn outline">Panel Storyboards</a>
+      </div>
+    </div>
+
+    <!-- Generador de Planes -->
+    <div>
+      <div class="input-row">
+        <div class="form-group">
+          <label>Nombre del Cliente o Marca</label>
+          <input type="text" id="clientName" class="form-control" placeholder="Ej: Arte en su Jardín, TecnoGZ, etc." value="Arte en su Jardín" />
+        </div>
+        <div class="form-group">
+          <label>Nicho de Mercado</label>
+          <select id="clientNiche" class="form-control">
+            <option value="Arte y Cultura" selected>Arte y Cultura</option>
+            <option value="eCommerce / Retail">eCommerce / Retail</option>
+            <option value="Tecnología y Gadgets">Tecnología y Gadgets</option>
+            <option value="Gastronomía / Restaurantes">Gastronomía / Restaurantes</option>
+            <option value="Servicios B2B / Consultoría">Servicios B2B / Consultoría</option>
+            <option value="Salud y Belleza">Salud y Belleza</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Objetivo Principal</label>
+          <select id="clientGoal" class="form-control">
+            <option value="Ventas y Conversión">Ventas y Conversión</option>
+            <option value="Autoridad y Posicionamiento" selected>Autoridad y Confianza</option>
+            <option value="Lanzamiento / Evento">Lanzamiento de Evento</option>
+          </select>
+        </div>
+        <div>
+          <button id="btnGenerate" class="btn primary">Generar Planes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor de Planes -->
+    <div id="plansContainer">
+      <p style="text-align: center; color: var(--muted-foreground); padding: 3rem 0;">Cargando catálogo de plantillas desde Neon Postgres…</p>
+    </div>
+
+    <!-- Historial de Propuestas Guardadas -->
+    <div style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+      <h3>Propuestas Guardadas en Base de Datos</h3>
+      <div id="savedProposals" style="margin-top: 1rem;">
+        <p style="color: var(--muted-foreground);">Consultando…</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/planes.js"></script>
+</body>
+</html>
