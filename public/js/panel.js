@@ -13,7 +13,6 @@ async function load() {
       window.location.href = "/login";
       return;
     }
-    const session = await sessionRes.json();
 
     const res = await fetch("/api/admin/projects");
     const data = await res.json();
@@ -48,18 +47,9 @@ async function load() {
           <span class="kicker">ImpulData · Panel</span>
           <h1>Proyectos en revisión</h1>
         </div>
-        <div style="display:flex; align-items:center; gap:0.75rem;">
-          <span class="hint" style="font-size:0.8125rem;">${escapeHtml(session.email)}</span>
-          <button type="button" id="logout-btn">Salir</button>
-        </div>
       </header>
       <div style="display:flex; flex-direction:column; gap:0.75rem;">${rows}</div>
     `;
-
-    document.getElementById("logout-btn").addEventListener("click", async () => {
-      await fetch("/api/logout", { method: "POST" });
-      window.location.href = "/login";
-    });
   } catch (err) {
     app.innerHTML = `<div class="center-state"><p class="error-text">${escapeHtml(err.message)}</p></div>`;
   }

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Catálogo · ImpulData</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="/css/app.css" />
+<link rel="stylesheet" href="/css/catalogo.css" />
+</head>
+<body>
+<main class="catalog">
+  <header class="cat-head">
+    <div>
+      <span class="cat-kicker">Biblioteca de formatos</span>
+      <h1>Catálogo de plantillas</h1>
+      <p class="cat-lede">Cada formato con su nivel, para qué sirve y la referencia original. Filtra por lo que necesita el cliente y abre la ficha.</p>
+    </div>
+    <div class="cat-stats" id="stats"></div>
+  </header>
+
+  <section class="toolbar" aria-label="Filtros">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar por nombre, idea o uso…" autocomplete="off" />
+      <kbd>/</kbd>
+    </label>
+    <div class="seg" id="nivelSeg" role="tablist" aria-label="Nivel"></div>
+    <div class="selects">
+      <select id="fTier" aria-label="Origen"><option value="">Todo origen</option></select>
+      <select id="fNicho" aria-label="Nicho"><option value="">Todo nicho</option></select>
+      <select id="fObjetivo" aria-label="Objetivo"><option value="">Todo objetivo</option></select>
+      <select id="fFmt" aria-label="Formato"><option value="">Todo formato</option></select>
+      <select id="fSort" aria-label="Orden">
+        <option value="nivel">Premium primero</option>
+        <option value="titulo">A → Z</option>
+        <option value="seg">Más cortos</option>
+      </select>
+    </div>
+  </section>
+
+  <div class="result-line"><span id="resultCount"></span><button type="button" class="link-btn" id="clear" hidden>Limpiar filtros</button></div>
+
+  <section class="grid" id="grid" aria-live="polite"></section>
+  <div class="empty" id="empty" hidden>
+    <strong>Nada con esos filtros.</strong>
+    <span>Prueba quitando un filtro o buscando otra palabra.</span>
+  </div>
+</main>
+
+<div class="drawer-scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="dTitle" role="dialog"></aside>
+
+<script src="/js/shell.js"></script>
+<script src="/js/catalogo.js"></script>
+</body>
+</html>

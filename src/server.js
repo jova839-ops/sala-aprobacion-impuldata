@@ -205,12 +205,8 @@ app.post("/api/login", async (req, res) => {
     const adminHash = process.env.ADMIN_PASSWORD_HASH;
     if (!email || !password) return res.status(400).json({ error: "Falta correo o contraseña." });
     if (email.trim().toLowerCase() !== adminEmail.trim().toLowerCase()) return res.status(401).json({ error: "Correo o contraseña incorrectos." });
-    let ok = false;
-    if (adminHash) {
-      ok = await bcrypt.compare(password, adminHash);
-    } else {
-      ok = password === "impuldata2026";
-    }
+    if (!adminHash) return res.status(500).json({ error: "ADMIN_PASSWORD_HASH no está configurada." });
+    const ok = await bcrypt.compare(password, adminHash);
     if (!ok) return res.status(401).json({ error: "Correo o contraseña incorrectos." });
     const token = signSession({ email: adminEmail, exp: Date.now() + SESSION_HOURS * 60 * 60 * 1000 });
     res.cookie(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: SESSION_HOURS * 60 * 60 * 1000 });
@@ -337,7 +333,8 @@ app.get("/api/review/:shareSlug/acta/:roundId.pdf", async (req, res) => {
 app.get("/api/plantillas", requireAdmin, async (req, res) => {
   try {
     const { nivel, nicho, search, limit = 100 } = req.query;
-    let query = `SELECT id, tier, nivel, titulo, autor, que, angulo, seg, cortes, nichos, objetivos, url FROM plantillas WHERE 1=1`;
+    let query = `SELECT id, tier, nivel, nivel_porque, titulo, autor, cliente, cat, soft, fmt, que, gramatica, uso, angulo,
+      seg, cortes, plano, estado, ficha, url, x, nichos, objetivos FROM plantillas WHERE 1=1`;
     const params = [];
     if (nivel) {
       params.push(nivel);
@@ -650,13 +647,14 @@ app.get("/api/admin/projects/:id", requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "index.html")));
+app.get("/", (req, res) => res.redirect("/panel"));
 app.get("/planes", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "planes.html")));
+app.get("/catalogo", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "catalogo.html")));
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "login.html")));
 app.get("/panel", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "panel.html")));
 app.get("/panel/:id", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "panel-proyecto.html")));
 app.get("/revision/:shareSlug", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "revision.html")));
-app.get("/health", (req, res) => res.json({ ok: true, db: "Neon Postgres (impuldata_estado)", templates: 97, consecutives: 83 }));
+app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.use((req, res) => res.status(404).send("Página no encontrada."));
 

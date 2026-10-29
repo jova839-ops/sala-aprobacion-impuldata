@@ -1,0 +1,72 @@
+/* Shell interno de ImpulData Studio: barra lateral + contenido. Se carga después de style.css. */
+:root {
+  --side-bg: #1d1518;
+  --side-fg: #e9dfd2;
+  --side-muted: #9b8b8f;
+  --side-hover: #2b2125;
+  --side-active: #3a2b2f;
+  --page-bg: #f7f2ea;
+  --ink: #221a1d;
+  --ink-soft: #5f5156;
+  --line: #e6dccb;
+  --chip: #efe6d6;
+  --amber: #b9792b;
+  --amber-soft: #f5e6cf;
+  --plum: #6b3d5a;
+  --plum-soft: #efe1ea;
+  --teal: #2f6b66;
+  --teal-soft: #dcece9;
+}
+
+body.app { background: var(--page-bg); color: var(--ink); }
+
+.shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+
+.side {
+  position: sticky; top: 0; height: 100vh; align-self: start;
+  background: var(--side-bg); color: var(--side-fg);
+  display: flex; flex-direction: column; gap: 1.5rem;
+  padding: 1.25rem 0.875rem;
+}
+.brand { display: flex; align-items: center; gap: 0.625rem; padding: 0.25rem 0.5rem; text-decoration: none; color: inherit; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: linear-gradient(135deg, #d39a4a, #8a4f2a);
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; color: #fff; font-size: 0.95rem;
+}
+.brand-name { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em; }
+.brand-sub { display: block; font-size: 0.7rem; color: var(--side-muted); font-weight: 500; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--side-muted); padding: 0.75rem 0.625rem 0.375rem; }
+.nav a {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.5rem 0.625rem; border-radius: 8px;
+  color: var(--side-fg); text-decoration: none; font-size: 0.875rem; font-weight: 500;
+}
+.nav a:hover { background: var(--side-hover); }
+.nav a.active { background: var(--side-active); color: #fff; }
+.nav svg { width: 16px; height: 16px; flex: none; opacity: 0.85; }
+.nav .count { margin-left: auto; font-size: 0.72rem; color: var(--side-muted); font-variant-numeric: tabular-nums; }
+
+.side-foot { margin-top: auto; border-top: 1px solid #33272b; padding-top: 0.875rem; font-size: 0.78rem; color: var(--side-muted); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.side-foot button { background: none; border: 1px solid #3d2f33; color: var(--side-fg); border-radius: 6px; padding: 0.3rem 0.6rem; font: inherit; cursor: pointer; }
+.side-foot button:hover { background: var(--side-hover); }
+
+.main { min-width: 0; }
+.main > .page { max-width: 1040px; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: none; align-items: center; justify-content: space-between;
+  background: var(--side-bg); color: var(--side-fg); padding: 0.75rem 1rem;
+}
+.topbar button { background: none; border: 0; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .side { position: fixed; inset: 0 auto 0 0; width: 260px; z-index: 30; transform: translateX(-100%); transition: transform 0.2s; }
+  .shell.open .side { transform: none; box-shadow: 0 0 0 100vmax rgba(0,0,0,0.35); }
+  .topbar { display: flex; }
+}
