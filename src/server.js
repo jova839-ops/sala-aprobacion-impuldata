@@ -76,12 +76,67 @@ async function migrate() {
   `);
 }
 
+// ---------- Seed (datos reales del piloto ENC-2026-003, derivados del storyboard v5 aprobado) ----------
+async function seed() {
+  const project = await pool.query(
+    `INSERT INTO storyboard_projects (
+       encargo_code, piece_name, client_name, share_slug, intro_message,
+       idea_angle, idea_audience, color_palette_notes, typography_notes,
+       current_tier_label, current_tier_description, next_tier_label, next_tier_description, max_review_rounds
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+     ON CONFLICT (encargo_code) DO UPDATE SET share_slug=EXCLUDED.share_slug, piece_name=EXCLUDED.piece_name, client_name=EXCLUDED.client_name,
+       intro_message=EXCLUDED.intro_message, idea_angle=EXCLUDED.idea_angle, idea_audience=EXCLUDED.idea_audience,
+       color_palette_notes=EXCLUDED.color_palette_notes, typography_notes=EXCLUDED.typography_notes, updated_at=now()
+     RETURNING id`,
+    [
+      "ENC-2026-003", "Arte en su Jardin", "Flavia Rosales / Marcela Cardenas", "arte-en-su-jardin",
+      "Asi pensamos tu video: cada cuadro de aqui abajo es una decision tomada a proposito -- que sientes, cuando lo sientes y por que. Revisalos, dinos si algo no encaja, y aprueba cuando esten listos.",
+      "\"No vienes a entenderlo, vienes a sentirlo florecer.\" El video contrasta el arte de museo -algo que se mira de lejos, detras de un marco- con el arte que se vive y respira como un jardin.",
+      "Publico interesado en arte y cultura en Barranquilla, cercano a la Universidad Simon Bolivar, seguidores de Flavia Rosales y de Arte en su Jardin de Marcela Cardenas.",
+      "Tres colores con significado fijo: Tinta (texto principal) - Tierra (datos practicos y remates) - Papel (fondo y texto sobre naturaleza real).",
+      "Instrument Serif Italic para las frases intimas; Archivo (800-900) para titulares de impacto y datos del evento.",
+      "Premium",
+      "[PLACEHOLDER -- MAX reemplaza antes de publicar] Descripcion de lo que el cliente ya tiene contratado hoy.",
+      "[PLACEHOLDER -- MAX reemplaza antes de publicar] Nombre del siguiente nivel",
+      "[PLACEHOLDER -- MAX reemplaza antes de publicar] Que gana el cliente si sube de nivel.",
+      2,
+    ]
+  );
+  const projectId = project.rows[0].id;
+  const scenes = [
+    [1, "Gancho -- El Museo", "gancho", "/images/escena_1.jpg", 0.0, 1.95, "Curiosidad tranquila, casi solemne -- como entrar a una sala de museo.", "Arrancamos con quietud y un marco dibujado, no una foto, para plantar la idea de \"arte para mirar de lejos\" antes de romperla."],
+    [2, "Ruptura -- \"No.\"", "desarrollo", "/images/escena_2.jpg", 1.95, 3.90, "Sorpresa, un golpe de energia que corta la calma inicial.", "El marco se rompe fisicamente en camara para decir, sin palabras, que esta pieza no es \"arte de museo\"."],
+    [3, "Naturaleza -- Se mueve y respira", "desarrollo", "/images/escena_3.jpg", 3.90, 7.80, "Calma viva -- que la obra respira, no esta quieta en una pared.", "Clips reales de naturaleza convierten la metafora en experiencia sensorial; el texto entra palabra por palabra."],
+    [4, "Florece -- Arte vivo", "desarrollo", "/images/escena_4.jpg", 7.80, 11.71, "Asombro creciente, la obra cobrando protagonismo.", "Las piezas de Flavia entran una a una como recortes de papel pegados, hasta que una salta al centro."],
+    [5, "Mensaje clave -- Sentirlo florecer", "mensaje", "/images/escena_5.jpg", 11.71, 15.61, "El corazon del mensaje: que no es para entender, es para sentir.", "La obra real de Flavia vive de fondo en transparencia mientras el texto construye la frase central."],
+    [6, "Datos del evento", "mensaje", "/images/escena_6.jpg", 15.61, 19.51, "Claridad practica -- ya sabes que sentir, ahora sabes a donde ir.", "Despues del climax emocional bajamos a lo concreto con la misma textura visual de las obras de fondo."],
+    [7, "Cierre -- Te esperamos", "cierre_y_llamado_a_la_accion", "/images/escena_7.jpg", 19.51, 24.00, "Calidez personal y una invitacion directa a compartir.", "El cierre nombra a las dos personas detras del evento y pide una accion concreta y social."],
+  ];
+  for (const s of scenes) {
+    await pool.query(
+      `INSERT INTO storyboard_scenes (project_id, scene_number, scene_title, scene_role, image_path, seconds_start, seconds_end, intended_feeling, artistic_reasoning)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT (project_id, scene_number) DO UPDATE SET scene_title=EXCLUDED.scene_title, scene_role=EXCLUDED.scene_role,
+         image_path=EXCLUDED.image_path, seconds_start=EXCLUDED.seconds_start, seconds_end=EXCLUDED.seconds_end,
+         intended_feeling=EXCLUDED.intended_feeling, artistic_reasoning=EXCLUDED.artistic_reasoning`,
+      [projectId, ...s]
+    );
+  }
+  await pool.query(
+    `INSERT INTO approval_rounds (project_id, round_number, status) VALUES ($1,1,'abierta') ON CONFLICT (project_id, round_number) DO NOTHING`,
+    [projectId]
+  );
+  console.log(`Seed OK -- proyecto ${projectId} (ENC-2026-003), 7 escenas, ronda 1 abierta.`);
+}
+
 // ---------- Auth ----------
 const COOKIE_NAME = "sala_session";
 const SESSION_HOURS = 12;
 
 function getSecret() {
-  return process.env.SESSION_SECRET || "impuldata_secret_2026_local_fallback";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET no está configurada.");
+  return secret;
 }
 function signSession(payload) {
   const b64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -537,6 +592,64 @@ app.post("/api/consecutivos", requireAdmin, async (req, res) => {
 });
 
 // ---------- SPA & UI Routes ----------
+// -- admin routes (protegidas) --
+app.get("/api/admin/projects", requireAdmin, async (req, res) => {
+  try {
+    const projectsRes = await pool.query(`SELECT * FROM storyboard_projects ORDER BY created_at DESC`);
+    const projects = [];
+    for (const project of projectsRes.rows) {
+      const totalScenesRes = await pool.query(`SELECT count(*)::int AS count FROM storyboard_scenes WHERE project_id = $1`, [project.id]);
+      const roundsRes = await pool.query(`SELECT * FROM approval_rounds WHERE project_id = $1 ORDER BY round_number DESC`, [project.id]);
+      const rounds = roundsRes.rows;
+      const latestSubmitted = rounds.find((r) => r.submitted_at !== null) || null;
+      const latestRound = rounds[0] || null;
+      let approved = 0, adjust = 0;
+      if (latestSubmitted) {
+        const reviewsRes = await pool.query(`SELECT decision FROM scene_reviews WHERE round_id = $1`, [latestSubmitted.id]);
+        approved = reviewsRes.rows.filter((r) => r.decision === "aprobado").length;
+        adjust = reviewsRes.rows.filter((r) => r.decision === "ajuste_solicitado").length;
+      }
+      projects.push({
+        id: project.id, encargoCode: project.encargo_code, pieceName: project.piece_name, clientName: project.client_name,
+        shareSlug: project.share_slug, totalScenes: totalScenesRes.rows[0].count,
+        latestRoundNumber: latestRound ? latestRound.round_number : null, latestRoundStatus: latestRound ? latestRound.status : null,
+        approvedScenesInLatestRound: approved, adjustScenesInLatestRound: adjust,
+        lastSubmittedAt: latestSubmitted ? latestSubmitted.submitted_at : null,
+      });
+    }
+    res.json({ projects });
+  } catch (err) {
+    console.error("GET /api/admin/projects error", err);
+    res.status(500).json({ error: "Error inesperado." });
+  }
+});
+
+app.get("/api/admin/projects/:id", requireAdmin, async (req, res) => {
+  try {
+    const projectRes = await pool.query(`SELECT * FROM storyboard_projects WHERE id = $1`, [req.params.id]);
+    const project = projectRes.rows[0];
+    if (!project) return res.status(404).json({ error: "No encontramos este proyecto." });
+    const scenesRes = await pool.query(`SELECT id, scene_number, scene_title, scene_role FROM storyboard_scenes WHERE project_id = $1 ORDER BY scene_number ASC`, [project.id]);
+    const roundsRes = await pool.query(`SELECT * FROM approval_rounds WHERE project_id = $1 ORDER BY round_number ASC`, [project.id]);
+    const rounds = [];
+    for (const round of roundsRes.rows) {
+      const reviewsRes = await pool.query(`SELECT scene_id, decision, comment FROM scene_reviews WHERE round_id = $1`, [round.id]);
+      rounds.push({
+        id: round.id, roundNumber: round.round_number, status: round.status, submittedAt: round.submitted_at,
+        reviews: reviewsRes.rows.map((r) => ({ sceneId: r.scene_id, decision: r.decision, comment: r.comment })),
+      });
+    }
+    res.json({
+      project: { id: project.id, encargoCode: project.encargo_code, pieceName: project.piece_name, clientName: project.client_name, shareSlug: project.share_slug, maxReviewRounds: project.max_review_rounds },
+      scenes: scenesRes.rows.map((s) => ({ id: s.id, sceneNumber: s.scene_number, sceneTitle: s.scene_title, sceneRole: s.scene_role })),
+      rounds,
+    });
+  } catch (err) {
+    console.error("GET /api/admin/projects/:id error", err);
+    res.status(500).json({ error: "Error inesperado." });
+  }
+});
+
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "index.html")));
 app.get("/planes", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "planes.html")));
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "login.html")));
@@ -548,7 +661,9 @@ app.get("/health", (req, res) => res.json({ ok: true, db: "Neon Postgres (impuld
 app.use((req, res) => res.status(404).send("Página no encontrada."));
 
 async function start() {
+  getSecret(); // falla al arrancar si falta SESSION_SECRET
   await migrate();
+  if (process.env.SEED_ON_BOOT === "true") await seed();
   app.listen(PORT, () => console.log(`Sala de Aprobación y Planes ImpulData escuchando en http://localhost:${PORT}`));
 }
 
