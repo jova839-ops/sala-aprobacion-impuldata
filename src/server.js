@@ -279,7 +279,7 @@ app.get("/api/review/:shareSlug/acta/:roundId.pdf", async (req, res) => {
 });
 
 // ---------- Plantillas (Catálogo Neon) ----------
-app.get("/api/plantillas", async (req, res) => {
+app.get("/api/plantillas", requireAdmin, async (req, res) => {
   try {
     const { nivel, nicho, search, limit = 100 } = req.query;
     let query = `SELECT id, tier, nivel, titulo, autor, que, angulo, seg, cortes, nichos, objetivos, url FROM plantillas WHERE 1=1`;
@@ -308,7 +308,7 @@ app.get("/api/plantillas", async (req, res) => {
 });
 
 // ---------- Generador de Planes y Recomendaciones ----------
-app.get("/api/planes/sugeridos", async (req, res) => {
+app.get("/api/planes/sugeridos", requireAdmin, async (req, res) => {
   try {
     const { nicho = "eCommerce", objetivo = "conversion" } = req.query;
 
@@ -386,7 +386,7 @@ app.get("/api/planes/sugeridos", async (req, res) => {
 });
 
 // ---------- Propuestas (Guardar y Consultar) ----------
-app.get("/api/propuestas", async (req, res) => {
+app.get("/api/propuestas", requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`SELECT * FROM propuestas ORDER BY id DESC`);
     res.json({ propuestas: result.rows });
@@ -396,7 +396,7 @@ app.get("/api/propuestas", async (req, res) => {
   }
 });
 
-app.post("/api/propuestas", async (req, res) => {
+app.post("/api/propuestas", requireAdmin, async (req, res) => {
   const client = await pool.connect();
   try {
     const { clienteNombre, nicho, objetivoComercial, opciones, notas, creadoPor = "TATAN" } = req.body;
@@ -438,7 +438,7 @@ app.post("/api/propuestas", async (req, res) => {
 });
 
 // ---------- PDF de Propuesta Comercial ----------
-app.get("/api/propuestas/:id/pdf", async (req, res) => {
+app.get("/api/propuestas/:id/pdf", requireAdmin, async (req, res) => {
   try {
     const propRes = await pool.query(`SELECT * FROM propuestas WHERE id = $1`, [req.params.id]);
     const propuesta = propRes.rows[0];
@@ -503,7 +503,7 @@ app.get("/api/propuestas/:id/pdf", async (req, res) => {
 });
 
 // ---------- Consecutivos ORG (Neon DB) ----------
-app.get("/api/consecutivos", async (req, res) => {
+app.get("/api/consecutivos", requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`SELECT * FROM consecutivos_org ORDER BY numero DESC`);
     res.json({ total: result.rowCount, consecutivos: result.rows });
@@ -513,7 +513,7 @@ app.get("/api/consecutivos", async (req, res) => {
   }
 });
 
-app.post("/api/consecutivos", async (req, res) => {
+app.post("/api/consecutivos", requireAdmin, async (req, res) => {
   try {
     const { descripcion, autor = "TATAN", referenciaCorta = "" } = req.body;
     if (!descripcion || !descripcion.trim()) return res.status(400).json({ error: "Falta la descripción del consecutivo." });

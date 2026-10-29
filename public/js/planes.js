@@ -2,6 +2,9 @@
 
 let currentPlansData = null;
 
+// Solo administradores: sin sesión, se va al login (igual que panel.js)
+fetch("/api/session").then((r) => { if (r.status === 401) window.location.href = "/login"; });
+
 async function loadPlans() {
   const clientName = document.getElementById("clientName").value.trim() || "Cliente General";
   const nicho = document.getElementById("clientNiche").value;
