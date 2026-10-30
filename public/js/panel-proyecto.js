@@ -29,7 +29,9 @@ async function load() {
     const sceneById = new Map(data.scenes.map((s) => [s.id, s]));
 
     let roundsHtml = "";
+    let roundIdx = 0;
     for (const round of data.rounds) {
+      const _i = roundIdx++;
       let reviewsHtml = "";
       for (const review of round.reviews) {
         const scene = sceneById.get(review.sceneId);
@@ -46,7 +48,7 @@ async function load() {
       }
 
       roundsHtml += `
-        <section class="round-card">
+        <section class="round-card rise" style="--i:${_i}">
           <div style="display:flex; align-items:center; justify-content:space-between;">
             <h2 style="font-size:1.25rem;">Ronda ${round.roundNumber} de ${data.project.maxReviewRounds}</h2>
             <span class="badge ${round.status === "bloqueada" ? "" : "badge-primary"}">

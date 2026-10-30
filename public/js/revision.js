@@ -19,9 +19,21 @@ function escapeHtml(str) {
 const shareSlug = window.location.pathname.split("/").filter(Boolean)[1];
 const app = document.getElementById("app");
 
-const state = { data: null, reviews: {}, submitting: false, actaUrl: null };
+const state = { data: null, reviews: {}, submitting: false, actaUrl: null, submitPassword: "" };
+
+function renderSkeleton() {
+  app.innerHTML = `
+    <div class="hero" style="padding:2rem;">
+      <div class="skeleton" style="height:14px; width:140px; margin:0 auto;"></div>
+      <div class="skeleton" style="height:32px; width:60%; margin:0.75rem auto 0;"></div>
+    </div>
+    <div class="skeleton" style="height:220px; border-radius:1.1rem;"></div>
+    <div class="skeleton" style="height:220px; border-radius:1.1rem;"></div>
+  `;
+}
 
 async function load() {
+  renderSkeleton();
   try {
     const res = await fetch(`/api/review/${shareSlug}`);
     const data = await res.json();
@@ -52,16 +64,16 @@ function render() {
   const latestLocked = [...rounds].reverse().find((r) => r.status === "bloqueada");
 
   let sceneCards = "";
-  for (const scene of scenes) {
+  scenes.forEach((scene, idx) => {
     const review = state.reviews[scene.id] || { decision: null, comment: "" };
     sceneCards += `
-      <article class="scene-card">
+      <article class="scene-card rise" style="--i:${idx}">
         <div class="scene-image-wrap">
           <img src="${(window.SCENE_IMAGES && window.SCENE_IMAGES[scene.sceneNumber]) || ""}" alt="Cuadro ${scene.sceneNumber}: ${escapeHtml(scene.sceneTitle)}" loading="lazy" />
         </div>
         <div class="scene-body">
           <div class="scene-meta">
-            <span class="badge">Cuadro ${scene.sceneNumber}</span>
+            <span class="badge badge-primary">Cuadro ${scene.sceneNumber}</span>
             <span class="badge">${SCENE_ROLE_LABEL[scene.sceneRole] || scene.sceneRole}</span>
             <span class="scene-seconds">${formatSeconds(scene.secondsStart, scene.secondsEnd)}</span>
           </div>
@@ -76,11 +88,11 @@ function render() {
           </div>
           <div class="decision-row">
             <button type="button" data-scene="${scene.id}" data-decision="aprobado"
-              class="${review.decision === "aprobado" ? "active-approve" : ""}" ${locked ? "disabled" : ""}>
+              class="${review.decision === "aprobado" ? "active-approve" : "outline"}" ${locked ? "disabled" : ""}>
               ✓ Aprobado
             </button>
             <button type="button" data-scene="${scene.id}" data-decision="ajuste_solicitado"
-              class="${review.decision === "ajuste_solicitado" ? "active-adjust" : ""}" ${locked ? "disabled" : ""}>
+              class="${review.decision === "ajuste_solicitado" ? "active-adjust" : "outline"}" ${locked ? "disabled" : ""}>
               Quiero un ajuste
             </button>
           </div>
@@ -89,20 +101,20 @@ function render() {
           ` : ""}
         </div>
       </article>
-      <aside class="tier-card">
+      <aside class="tier-card rise" style="--i:${idx}">
         <div class="tier-col">
           <span class="field-label">Lo que tienes hoy</span>
           <strong>${escapeHtml(project.currentTierLabel || "—")}</strong>
           <p class="hint">${escapeHtml(project.currentTierDescription || "—")}</p>
         </div>
         <div class="tier-col">
-          <span class="field-label" style="color:var(--primary);">✨ Siguiente nivel</span>
+          <span class="field-label" style="color:var(--amber-dark);">✨ Siguiente nivel</span>
           <strong>${escapeHtml(project.nextTierLabel || "—")}</strong>
           <p class="hint">${escapeHtml(project.nextTierDescription || "—")}</p>
         </div>
       </aside>
     `;
-  }
+  });
 
   let submitSection = "";
   if (locked) {
@@ -131,6 +143,9 @@ function render() {
     submitSection = `
       <div class="submit-section">
         <p class="hint">${hint}</p>
+        ${project.requiresSubmitPassword ? `
+          <input type="password" id="submit-password" placeholder="Contraseña de envío" value="${escapeHtml(state.submitPassword)}" />
+        ` : ""}
         <button type="button" id="submit-btn" class="primary" ${canSubmit ? "" : "disabled"}>
           ${state.submitting ? "Enviando…" : "Enviar revisión"}
         </button>
@@ -182,6 +197,11 @@ function render() {
     });
   });
 
+  const passwordInput = document.getElementById("submit-password");
+  if (passwordInput) {
+    passwordInput.addEventListener("input", () => { state.submitPassword = passwordInput.value; });
+  }
+
   const submitBtn = document.getElementById("submit-btn");
   if (submitBtn) submitBtn.addEventListener("click", submitReview);
 }
@@ -199,7 +219,7 @@ async function submitReview() {
     const res = await fetch(`/api/review/${shareSlug}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roundId: state.data.activeRoundId, reviews }),
+      body: JSON.stringify({ roundId: state.data.activeRoundId, reviews, password: state.submitPassword }),
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || "No se pudo enviar la revisión.");

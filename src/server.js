@@ -73,7 +73,29 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_storyboard_scenes_project ON storyboard_scenes(project_id);
     CREATE INDEX IF NOT EXISTS idx_approval_rounds_project ON approval_rounds(project_id);
     CREATE INDEX IF NOT EXISTS idx_scene_reviews_round ON scene_reviews(round_id);
+
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id serial primary key,
+      email text not null unique,
+      password_hash text not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+
+    ALTER TABLE storyboard_projects ADD COLUMN IF NOT EXISTS submit_password text;
   `);
+
+  // Primer arranque: si no hay ningún admin en la tabla, se siembra desde las
+  // variables de entorno (bootstrap). Después de esto, la contraseña vive SOLO
+  // en la base de datos -- cambiarla ya no depende de tocar Render.
+  const countRes = await pool.query(`SELECT count(*)::int AS n FROM admin_users`);
+  if (countRes.rows[0].n === 0 && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD_HASH) {
+    await pool.query(
+      `INSERT INTO admin_users (email, password_hash) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING`,
+      [process.env.ADMIN_EMAIL.trim().toLowerCase(), process.env.ADMIN_PASSWORD_HASH]
+    );
+    console.log(`Admin sembrado desde variables de entorno: ${process.env.ADMIN_EMAIL}`);
+  }
 }
 
 // ---------- Seed (datos reales del piloto ENC-2026-003, derivados del storyboard v5 aprobado) ----------
@@ -201,16 +223,15 @@ app.use(express.static(path.join(__dirname, "..", "public"), { index: false }));
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    const adminEmail = process.env.ADMIN_EMAIL || "tatan@impuldata.com";
-    const adminHash = process.env.ADMIN_PASSWORD_HASH;
     if (!email || !password) return res.status(400).json({ error: "Falta correo o contraseña." });
-    if (email.trim().toLowerCase() !== adminEmail.trim().toLowerCase()) return res.status(401).json({ error: "Correo o contraseña incorrectos." });
-    if (!adminHash) return res.status(500).json({ error: "ADMIN_PASSWORD_HASH no está configurada." });
-    const ok = await bcrypt.compare(password, adminHash);
+    const adminRes = await pool.query(`SELECT * FROM admin_users WHERE email = $1`, [email.trim().toLowerCase()]);
+    const admin = adminRes.rows[0];
+    if (!admin) return res.status(401).json({ error: "Correo o contraseña incorrectos." });
+    const ok = await bcrypt.compare(password, admin.password_hash);
     if (!ok) return res.status(401).json({ error: "Correo o contraseña incorrectos." });
-    const token = signSession({ email: adminEmail, exp: Date.now() + SESSION_HOURS * 60 * 60 * 1000 });
+    const token = signSession({ email: admin.email, exp: Date.now() + SESSION_HOURS * 60 * 60 * 1000 });
     res.cookie(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: SESSION_HOURS * 60 * 60 * 1000 });
-    res.json({ email: adminEmail });
+    res.json({ email: admin.email });
   } catch (err) {
     console.error("POST /api/login error", err);
     res.status(500).json({ error: "Error inesperado." });
@@ -218,6 +239,25 @@ app.post("/api/login", async (req, res) => {
 });
 app.post("/api/logout", (req, res) => { res.clearCookie(COOKIE_NAME); res.json({ ok: true }); });
 app.get("/api/session", requireAdmin, (req, res) => res.json({ email: req.adminEmail }));
+
+app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: "Falta la contraseña actual o la nueva." });
+    if (String(newPassword).length < 8) return res.status(400).json({ error: "La nueva contraseña debe tener al menos 8 caracteres." });
+    const adminRes = await pool.query(`SELECT * FROM admin_users WHERE email = $1`, [req.adminEmail]);
+    const admin = adminRes.rows[0];
+    if (!admin) return res.status(404).json({ error: "No encontramos esta cuenta." });
+    const ok = await bcrypt.compare(currentPassword, admin.password_hash);
+    if (!ok) return res.status(401).json({ error: "La contraseña actual no es correcta." });
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.query(`UPDATE admin_users SET password_hash = $1, updated_at = now() WHERE id = $2`, [newHash, admin.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /api/admin/change-password error", err);
+    res.status(500).json({ error: "Error inesperado." });
+  }
+});
 
 // ---------- Review Routes (Público) ----------
 app.get("/api/review/:shareSlug", async (req, res) => {
@@ -236,6 +276,7 @@ app.get("/api/review/:shareSlug", async (req, res) => {
         colorPaletteNotes: project.color_palette_notes, typographyNotes: project.typography_notes,
         currentTierLabel: project.current_tier_label, currentTierDescription: project.current_tier_description,
         nextTierLabel: project.next_tier_label, nextTierDescription: project.next_tier_description, maxReviewRounds: project.max_review_rounds,
+        requiresSubmitPassword: !!project.submit_password,
       },
       scenes: scenesRes.rows.map((s) => ({
         id: s.id, sceneNumber: s.scene_number, sceneTitle: s.scene_title, sceneRole: s.scene_role, imagePath: s.image_path,
@@ -253,11 +294,14 @@ app.get("/api/review/:shareSlug", async (req, res) => {
 app.post("/api/review/:shareSlug/submit", async (req, res) => {
   const client = await pool.connect();
   try {
-    const { roundId, reviews } = req.body;
+    const { roundId, reviews, password } = req.body;
     if (!roundId || !Array.isArray(reviews) || reviews.length === 0) return res.status(400).json({ error: "Faltan datos de la revisión." });
     const projectRes = await client.query(`SELECT * FROM storyboard_projects WHERE share_slug = $1`, [req.params.shareSlug]);
     const project = projectRes.rows[0];
     if (!project) return res.status(404).json({ error: "No encontramos este proyecto." });
+    if (project.submit_password && project.submit_password !== String(password || "")) {
+      return res.status(401).json({ error: "Contraseña incorrecta." });
+    }
     const roundRes = await client.query(`SELECT * FROM approval_rounds WHERE id = $1 AND project_id = $2`, [roundId, project.id]);
     const round = roundRes.rows[0];
     if (!round) return res.status(404).json({ error: "No encontramos esta ronda." });
@@ -637,12 +681,31 @@ app.get("/api/admin/projects/:id", requireAdmin, async (req, res) => {
       });
     }
     res.json({
-      project: { id: project.id, encargoCode: project.encargo_code, pieceName: project.piece_name, clientName: project.client_name, shareSlug: project.share_slug, maxReviewRounds: project.max_review_rounds },
+      project: {
+        id: project.id, encargoCode: project.encargo_code, pieceName: project.piece_name, clientName: project.client_name,
+        shareSlug: project.share_slug, maxReviewRounds: project.max_review_rounds, requiresSubmitPassword: !!project.submit_password,
+      },
       scenes: scenesRes.rows.map((s) => ({ id: s.id, sceneNumber: s.scene_number, sceneTitle: s.scene_title, sceneRole: s.scene_role })),
       rounds,
     });
   } catch (err) {
     console.error("GET /api/admin/projects/:id error", err);
+    res.status(500).json({ error: "Error inesperado." });
+  }
+});
+
+app.post("/api/admin/projects/:id/submit-password", requireAdmin, async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    const value = password && String(password).trim() ? String(password).trim() : null;
+    const result = await pool.query(
+      `UPDATE storyboard_projects SET submit_password = $1, updated_at = now() WHERE id = $2 RETURNING id`,
+      [value, req.params.id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: "No encontramos este proyecto." });
+    res.json({ ok: true, requiresSubmitPassword: !!value });
+  } catch (err) {
+    console.error("POST /api/admin/projects/:id/submit-password error", err);
     res.status(500).json({ error: "Error inesperado." });
   }
 });
